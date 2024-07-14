@@ -1,0 +1,3 @@
+[submodule "fcutils-secret"]
+	path = fcutils-secret
+	url = git@github.com:Lucioschenkel/fcutils-secret.git
