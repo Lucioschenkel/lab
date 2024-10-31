@@ -15,8 +15,15 @@ spec:
       labels:
         app: mealie
     spec:
+      volumes:
+        - name: mealie-data
+          persistentVolumeClaim:
+            claimName: mealie-data
       containers:
-        - image: ghcr.io/mealie-recipes/mealie:v1.3.2
+        - image: ghcr.io/mealie-recipes/mealie:v2.1.0
           name: mealie
           ports:
             - containerPort: 9000
+          volumeMounts:
+            - mountPath: /app/data
+              name: mealie-data
