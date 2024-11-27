@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkding
+  namespace: linkding
+  labels:
+    app: linkding
+spec:
+  selector:
+    matchLabels:
+      app: linkding
+  template:
+    metadata:
+      labels:
+        app: linkding
+      name: linkding
+    spec:
+      volumes:
+        - name: linkding-data
+          persistentVolumeClaim:
+            claimName: linkding-data
+      containers:
+        - image: sissbruecker/linkding:1.36.0-plus
+          name: linkding
+          ports:
+            - containerPort: 9090
+          envFrom:
+            - configMapRef:
+                name: linkding-env
+          volumeMounts:
+            - mountPath: /etc/linkding/data
+              name: linkding-data
