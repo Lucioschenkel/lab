@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: nginx-dr
+spec:
+  host: nginx-service
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  # remember the subset from the vs? Here we specify (using labels) to which deployment
+  # the traffic goes
+  subsets:
+    - name: v1
+      labels:
+        version: a
+      trafficPolicy:
+        loadBalancer:
+          simple: LEAST_CONN
+    - name: v2
+      labels:
+        version: b
