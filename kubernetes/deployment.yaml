@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goserver
+  labels:
+    app: goserver
+spec:
+  selector:
+    matchLabels:
+      app: goserver
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: goserver
+    spec:
+      containers:
+      - name: goserver
+        image: wesleywillians/hello-go:v5.5
+        resources:
+          # minimum amount of resources the container is guaranteed
+          requests:
+            cpu: 100m
+            memory: 20Mi # If there aren't enough resources, the pod/container will be in pending state
+          
+          # maximum amount of resources the container can use
+          limits:
+            cpu: 500m
+            memory: 200Mi
+        # executes before liveness and readiness probes
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          periodSeconds: 3
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          periodSeconds: 5 # the default value according to the documentation is 10 seconds
+          failureThreshold: 1 # the default value according to the documentation is 3
+          timeoutSeconds: 1
+          successThreshold: 1
+          # initialDelaySeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          periodSeconds: 3
+          failureThreshold: 1
+          # initialDelaySeconds: 10
+        envFrom:
+          - configMapRef:
+              name: goserver-env
+
+          - secretRef:
+              name: goserver-secret
+        volumeMounts:
+          - mountPath: "/go/myfamily"
+            name: config
+            # readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: configmap-family
+            items:
+            - key: members
+              path: family.txt
+        # env:
+        # - name: NAME
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: goserver-env
+        #       key: NAME
+        # - name: AGE
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: goserver-env
+        #       key: AGE
