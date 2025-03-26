@@ -4,3 +4,6 @@
 [submodule "jenkins/03-nodejs-argocd-organization-folder"]
 	path = jenkins/03-nodejs-argocd-organization-folder
 	url = git@github.com:Lucioschenkel/solar-system-gitea.git
+[submodule "keycloak/01-client-server-openid-connect"]
+	path = keycloak/01-client-server-openid-connect
+	url = https://github.com/PackPublishing/Keycloak---Identity-and-Access-Management-for-Modern-Applications-2nd-Edition.git
