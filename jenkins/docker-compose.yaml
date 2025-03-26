@@ -1,0 +1,27 @@
+services:
+  gitea:
+    image: docker.gitea.com/gitea:1.23.6-rootless
+    restart: always
+    container_name: gitea
+    volumes:
+      - ./data:/var/lib/gitea
+      - ./config:/etc/gitea
+      - ./timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:2222"
+  jenkins:
+    image: jenkins-local:latest
+    build:
+      context: .
+    container_name: jenkins
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    restart: on-failure
+    ports:
+      - 8080:8080
+      - 50000:50000
+
+volumes:
+  jenkins_home:
