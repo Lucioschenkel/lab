@@ -1,3 +1,6 @@
 [submodule "jenkins/02-mvn-springboot"]
 	path = jenkins/02-mvn-springboot
 	url = git@github.com:Lucioschenkel/jenkins-hello-world.git
+[submodule "jenkins/03-nodejs-argocd-organization-folder"]
+	path = jenkins/03-nodejs-argocd-organization-folder
+	url = git@github.com:Lucioschenkel/solar-system-gitea.git
