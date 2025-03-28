@@ -58,3 +58,13 @@ print(copied)  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
 copied.reverse()
 
 print(copied)  # [9, 8, 7, 6, 5, 4, 3, 2, 1]
+
+# List unpacking: this is similar to "destructuring" in JavaScript
+# the main difference is the "rest" of the list, instead of ..., we use *
+a, b, c, *rest, last = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+print(a)  # 1
+print(b)  # 2
+print(c)  # 3
+print(rest)  # [4, 5, 6, 7, 8]
+print(last)  # 9
