@@ -7,3 +7,6 @@
 [submodule "keycloak/01-client-server-openid-connect"]
 	path = keycloak/01-client-server-openid-connect
 	url = https://github.com/PackPublishing/Keycloak---Identity-and-Access-Management-for-Modern-Applications-2nd-Edition.git
+[submodule "graphql/odyssey-lift-off-part1"]
+	path = graphql/odyssey-lift-off-part1
+	url = https://github.com/apollographql/odyssey-lift-off-part1
