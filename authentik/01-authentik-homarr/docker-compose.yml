@@ -1,0 +1,162 @@
+---
+services:
+  linkding:
+    image: sissbruecker/linkding:latest
+    container_name: linkding
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    environment:
+      # Enable OIDC authentication with Authentik
+      - LD_ENABLE_OIDC=True
+      # Client ID and Secret from Authentik OAuth Provider
+      - OIDC_RP_CLIENT_ID=${LD_CLIENT_ID}
+      - OIDC_RP_CLIENT_SECRET=${LD_CLIENT_SECRET}
+      # Required OIDC endpoints for authentication
+      - OIDC_OP_AUTHORIZATION_ENDPOINT=http://server:9000/application/o/authorize/
+      - OIDC_OP_TOKEN_ENDPOINT=http://server:9000/application/o/token/
+      - OIDC_OP_USERINFO_ENDPOINT=http://server:9000/application/o/userinfo/
+      - OIDC_OP_JWKS_ENDPOINT=http://server:9000/application/o/linkding/jwks/
+      - OIDC_USE_PKCE=False
+      # Additional OIDC debug settings
+      - OIDC_RP_SIGN_ALGO=HS256
+      - DEBUG=True
+      - OIDC_RP_REDIRECT_URIS=http://linkding:9090/oidc/callback/
+      - OIDC_USE_DISCOVERY=False
+      # Create users automatically when they log in through OIDC
+      - OIDC_CREATE_USER=True
+      # Added settings to make sure JWKS endpoint is correctly used
+      - OIDC_VERIFY_SSL=False
+      - OIDC_PREFER_NATIVE_LOGOUT=True
+    networks:
+      - authentik
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+    ports:
+      - "7575:7575"
+    volumes:
+      - ./homarr:/appdata
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=America/Los_Angeles
+      - SECRET_ENCRYPTION_KEY=${SECRET_ENCRYPTION_KEY}
+      - BASE_URL=http://local.homarr.com:7575
+      - NEXTAUTH_URL=http://local.homarr.com:7575
+      - AUTH_PROVIDERS=oidc #(optional: include ',credentials' to keep local accounts as fallback)
+      - AUTH_OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+      - AUTH_OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      - AUTH_OIDC_ISSUER=http://server:9000/application/o/${OIDC_SLUG}/
+      - AUTH_OIDC_URI=http://server:9000/application/o/authorize
+      - AUTH_OIDC_CLIENT_NAME=authentik
+      - AUTH_OIDC_SCOPE_OVERWRITE=openid email profile groups
+      - AUTH_OIDC_ADMIN_GROUP=${ADMIN_GROUP}
+      - AUTH_OIDC_GROUPS_ATTRIBUTE=groups
+      - AUTH_LOGOUT_REDIRECT_URL=http://server:9000/application/o/${OIDC_SLUG}/end-session/
+      - AUTH_OIDC_AUTO_LOGIN=true #To sign in with Authentik automatically
+    networks:
+      - authentik
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      POSTGRES_DB: ${PG_DB:-authentik}
+    env_file:
+      - .env
+    networks:
+      - authentik
+  redis:
+    image: docker.io/library/redis:alpine
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - redis:/data
+    networks:
+      - authentik
+  server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.0}
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    volumes:
+      - ./media:/media
+      - ./custom-templates:/templates
+    env_file:
+      - .env
+    ports:
+      - "${COMPOSE_PORT_HTTP:-9000}:9000"
+      - "${COMPOSE_PORT_HTTPS:-9443}:9443"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - authentik
+  worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.0}
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      PUID: 501
+      PGID: 20
+    # `user: root` and the docker socket volume are optional.
+    # See more for the docker socket integration here:
+    # https://goauthentik.io/docs/outposts/integrations/docker
+    # Removing `user: root` also prevents the worker from fixing the permissions
+    # on the mounted folders, so when removing this make sure the folders have the correct UID/GID
+    # (1000:1000 by default)
+    user: "501:20"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./media:/media
+      - ./certs:/certs
+      - ./custom-templates:/templates
+    env_file:
+      - .env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - authentik
+
+volumes:
+  database:
+    driver: local
+  redis:
+    driver: local
+
+networks:
+  authentik:
+    driver: bridge
