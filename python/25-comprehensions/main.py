@@ -24,3 +24,8 @@ print(my_dict)
 
 my_dict2 = {num:num*2 for num in [1, 2, 3]}
 print(my_dict2)
+
+# create list of duplicates in list using set comprehension
+some_list = ['a', 'b', 'c', 'b', 'd', 'm', 'n', 'n']
+
+print([letter for letter in some_list if some_list.count(letter) > 1])
