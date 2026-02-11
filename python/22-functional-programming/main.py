@@ -24,3 +24,6 @@ print(list(zip(my_list, odd))) # combines two or more lists combining elements a
 
 
 print(reduce(sum_reduce,my_list, 0)) # reduces a list down to a single value
+
+# lambda functions in python use the lambda keyword, e.g.:
+print(list(map(lambda x: x * 2, [1, 2, 3]))) # will return [2, 4, 6]
